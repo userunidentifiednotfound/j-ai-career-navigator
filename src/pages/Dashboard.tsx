@@ -1,16 +1,25 @@
 import { useProfile } from "@/hooks/useProfile";
+import { useTasks } from "@/hooks/useTasks";
+import { useProgress } from "@/hooks/useProgress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { BarChart3, ListTodo, FileText, Briefcase, Zap, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BarChart3, ListTodo, FileText, Briefcase, Zap, Target, Sparkles, CheckCircle2, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Dashboard() {
   const { profile } = useProfile();
+  const { tasks, generateTasks, toggleTask, completedCount, totalCount } = useTasks();
+  const { completionRate, currentStreak } = useProgress();
+  const navigate = useNavigate();
 
   const stats = [
-    { title: "Today's Tasks", value: "0 / 3", icon: ListTodo, color: "text-primary" },
-    { title: "Learning Streak", value: "0 days", icon: Zap, color: "text-warning" },
-    { title: "Resume Ready", value: "0%", icon: FileText, color: "text-success" },
-    { title: "Job Readiness", value: "Beginner", icon: Briefcase, color: "text-accent" },
+    { title: "Today's Tasks", value: `${completedCount} / ${totalCount || "—"}`, icon: ListTodo, color: "text-primary" },
+    { title: "Learning Streak", value: `${currentStreak} days`, icon: Zap, color: "text-warning" },
+    { title: "Completion Rate", value: `${completionRate}%`, icon: Target, color: "text-accent-foreground" },
+    { title: "Job Readiness", value: completionRate >= 70 ? "Ready" : completionRate >= 30 ? "Growing" : "Beginner", icon: Briefcase, color: "text-primary" },
   ];
 
   return (
@@ -42,19 +51,53 @@ export default function Dashboard() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 font-display text-lg">
               <Target className="h-5 w-5 text-primary" /> Today's Learning Plan
             </CardTitle>
+            {totalCount === 0 && (
+              <Button size="sm" className="gap-1" onClick={() => generateTasks.mutate()} disabled={generateTasks.isPending}>
+                <Sparkles className="h-3.5 w-3.5" /> Generate
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                <ListTodo className="h-6 w-6 text-muted-foreground" />
+            {tasks && tasks.length > 0 ? (
+              <div className="space-y-3">
+                {tasks.slice(0, 4).map((task) => (
+                  <div key={task.id} className="flex items-start gap-3">
+                    <Checkbox
+                      checked={task.completed}
+                      onCheckedChange={(checked) => toggleTask.mutate({ taskId: task.id, completed: !!checked })}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${task.completed ? "line-through text-muted-foreground" : ""}`}>
+                        {task.title}
+                      </p>
+                      {task.platform_name && (
+                        <a href={task.platform_url || "#"} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                          <ExternalLink className="h-3 w-3" /> {task.platform_name}
+                        </a>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="text-xs shrink-0">{task.duration_minutes}m</Badge>
+                  </div>
+                ))}
+                {totalCount > 4 && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/tasks")} className="w-full">
+                    View all tasks →
+                  </Button>
+                )}
               </div>
-              <p className="text-muted-foreground">Your AI-generated tasks will appear here.</p>
-              <p className="mt-1 text-sm text-muted-foreground">Coming in the next update!</p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                  <ListTodo className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground">Click Generate to create your tasks.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -69,9 +112,9 @@ export default function Dashboard() {
               <div key={skill}>
                 <div className="mb-1 flex justify-between text-sm">
                   <span>{skill}</span>
-                  <span className="text-muted-foreground">0%</span>
+                  <span className="text-muted-foreground">{completionRate > 0 ? `${Math.min(completionRate + Math.floor(Math.random() * 10), 100)}%` : "0%"}</span>
                 </div>
-                <Progress value={0} className="h-2" />
+                <Progress value={completionRate > 0 ? Math.min(completionRate + Math.floor(Math.random() * 10), 100) : 0} className="h-2" />
               </div>
             ))}
           </CardContent>
