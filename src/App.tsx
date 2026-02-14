@@ -15,6 +15,7 @@ import ProgressPage from "@/pages/ProgressPage";
 import Resume from "@/pages/Resume";
 import Jobs from "@/pages/Jobs";
 import Mentor from "@/pages/Mentor";
+import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/resume" element={<ProtectedRoute><Resume /></ProtectedRoute>} />
       <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
       <Route path="/mentor" element={<ProtectedRoute><Mentor /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

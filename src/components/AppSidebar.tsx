@@ -5,7 +5,7 @@ import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
   SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, ListTodo, BarChart3, FileText, Briefcase, Bot, LogOut, Moon, Sun, Zap } from "lucide-react";
+import { LayoutDashboard, ListTodo, BarChart3, FileText, Briefcase, Bot, LogOut, Moon, Sun, Zap, Settings } from "lucide-react";
 
 const navItems = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/" },
@@ -14,6 +14,7 @@ const navItems = [
   { title: "Resume", icon: FileText, path: "/resume" },
   { title: "Jobs", icon: Briefcase, path: "/jobs" },
   { title: "AI Mentor", icon: Bot, path: "/mentor" },
+  { title: "Profile", icon: Settings, path: "/profile" },
 ];
 
 export function AppSidebar() {
