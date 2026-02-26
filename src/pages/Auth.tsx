@@ -34,15 +34,18 @@ export default function Auth() {
           if (error.message.includes("already registered")) toast.error("This email is already registered. Try signing in.");
           else toast.error(error.message);
         } else {
-          toast.success("Check your email to confirm your account!");
+          toast.success("Account created! You're being signed in...");
         }
       } else {
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message.includes("Invalid login")) toast.error("Invalid email or password");
+          else if (error.message.includes("Failed to fetch")) toast.error("Network error. Please check your connection and try again.");
           else toast.error(error.message);
         }
       }
+    } catch (err: any) {
+      toast.error(err?.message?.includes("fetch") ? "Network error. Please try again." : "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
