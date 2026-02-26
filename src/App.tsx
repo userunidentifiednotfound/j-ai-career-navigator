@@ -19,6 +19,7 @@ import Profile from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
+const SKIP_AUTH_FOR_TESTING = true;
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -27,6 +28,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (loading || isLoading) {
     return <div className="flex h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   }
+  if (SKIP_AUTH_FOR_TESTING) return <AppLayout>{children}</AppLayout>;
   if (!user) return <Navigate to="/auth" replace />;
   if (profile && !profile.onboarding_completed) return <Navigate to="/onboarding" replace />;
 
@@ -40,6 +42,7 @@ function OnboardingRoute() {
   if (loading || isLoading) {
     return <div className="flex h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   }
+  if (SKIP_AUTH_FOR_TESTING) return <Navigate to="/" replace />;
   if (!user) return <Navigate to="/auth" replace />;
   if (profile?.onboarding_completed) return <Navigate to="/" replace />;
 
@@ -49,7 +52,7 @@ function OnboardingRoute() {
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/auth" element={<Auth />} />
+      <Route path="/auth" element={SKIP_AUTH_FOR_TESTING ? <Navigate to="/" replace /> : <Auth />} />
       <Route path="/onboarding" element={<OnboardingRoute />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
