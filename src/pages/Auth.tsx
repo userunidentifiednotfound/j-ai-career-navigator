@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,15 +38,39 @@ export default function Auth() {
           toast.success("Account created! You're being signed in...");
         }
       } else {
-        const { error } = await signIn(email, password);
+        let { error } = await signIn(email, password);
+
+        // Recover once from stale/aborted auth state before showing error
+        const isFetchAbortError =
+          !!error &&
+          (error.message.includes("Failed to fetch") ||
+            error.message.includes("aborted") ||
+            (error as Error).name === "AuthRetryableFetchError");
+
+        if (isFetchAbortError) {
+          try {
+            await supabase.auth.signOut({ scope: "local" });
+          } catch {
+            // Ignore cleanup errors
+          }
+          const retry = await signIn(email, password);
+          error = retry.error;
+        }
+
         if (error) {
           if (error.message.includes("Invalid login")) toast.error("Invalid email or password");
-          else if (error.message.includes("Failed to fetch")) toast.error("Network error. Please check your connection and try again.");
+          else if (error.message.includes("Failed to fetch") || error.message.includes("aborted")) {
+            toast.error("Session reset completed. Please try sign in once more.");
+          }
           else toast.error(error.message);
         }
       }
     } catch (err: any) {
-      toast.error(err?.message?.includes("fetch") ? "Network error. Please try again." : "Something went wrong. Please try again.");
+      if (err?.name === "AbortError" || err?.message?.includes("aborted")) {
+        toast.error("Request was interrupted. Please try again.");
+      } else {
+        toast.error(err?.message?.includes("fetch") ? "Session issue detected. Please try again." : "Something went wrong. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }

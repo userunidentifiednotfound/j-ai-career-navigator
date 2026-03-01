@@ -19,46 +19,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set a fast timeout - don't let auth block the UI for more than 3s
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 3000);
+    let mounted = true;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'TOKEN_REFRESHED' && !session) {
-        // Token refresh failed - clear ALL stored auth data
-        localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
-        supabase.auth.signOut();
+    const clearCorruptSession = async () => {
+      localStorage.removeItem("sb-vhxzeywrjzdpwxagzfbg-auth-token");
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch {
+        // Ignore network/abort errors during local cleanup
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      clearTimeout(timeout);
-    });
-
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        // Clear corrupt session data from localStorage
-        localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
-        supabase.auth.signOut();
+      if (mounted) {
         setSession(null);
         setUser(null);
-      } else {
+      }
+    };
+
+    // Never block UI indefinitely on auth bootstrap
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 2500);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && !session) {
+        void clearCorruptSession();
+        if (mounted) setLoading(false);
+        clearTimeout(timeout);
+        return;
+      }
+
+      if (mounted) {
         setSession(session);
         setUser(session?.user ?? null);
+        setLoading(false);
       }
-      setLoading(false);
-      clearTimeout(timeout);
-    }).catch(() => {
-      // Network error - clear stale tokens and stop loading
-      localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
-      setSession(null);
-      setUser(null);
-      setLoading(false);
       clearTimeout(timeout);
     });
 
+    supabase.auth.getSession()
+      .then(async ({ data: { session }, error }) => {
+        if (error) {
+          await clearCorruptSession();
+        } else if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      })
+      .catch(async (err) => {
+        if ((err as Error)?.name !== "AbortError") {
+          console.error("Auth bootstrap error:", err);
+        }
+        await clearCorruptSession();
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+        clearTimeout(timeout);
+      });
+
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
