@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "@/hooks/use-toast";
+import { DEMO_TASKS, SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 export function useTasks() {
   const { user } = useAuth();
@@ -9,8 +10,9 @@ export function useTasks() {
   const today = new Date().toISOString().split("T")[0];
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["tasks", user?.id, today],
+    queryKey: ["tasks", user?.id, today, SKIP_AUTH_FOR_TESTING],
     queryFn: async () => {
+      if (!user && SKIP_AUTH_FOR_TESTING) return DEMO_TASKS;
       if (!user) return [];
       const { data, error } = await supabase
         .from("daily_tasks")
@@ -21,11 +23,12 @@ export function useTasks() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user || SKIP_AUTH_FOR_TESTING,
   });
 
   const generateTasks = useMutation({
     mutationFn: async () => {
+      if (SKIP_AUTH_FOR_TESTING) return { tasks: DEMO_TASKS };
       const { data, error } = await supabase.functions.invoke("generate-tasks");
       if (error) throw error;
       return data;
@@ -41,6 +44,7 @@ export function useTasks() {
 
   const toggleTask = useMutation({
     mutationFn: async ({ taskId, completed }: { taskId: string; completed: boolean }) => {
+      if (!user && SKIP_AUTH_FOR_TESTING) return;
       if (!user) throw new Error("Not authenticated");
       const { error } = await supabase
         .from("daily_tasks")

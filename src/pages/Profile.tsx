@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { User, Clock, Briefcase, Save, Loader2 } from "lucide-react";
+import { DEMO_USER, SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 export default function Profile() {
   const { profile, isLoading, updateProfile } = useProfile();
@@ -86,7 +87,7 @@ export default function Profile() {
             </div>
             <div className="space-y-2">
               <Label>Email</Label>
-              <Input value={user?.email || ""} disabled className="opacity-60" />
+              <Input value={user?.email || (SKIP_AUTH_FOR_TESTING ? DEMO_USER.email : "")} disabled className="opacity-60" />
             </div>
           </CardContent>
         </Card>

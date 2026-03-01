@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Zap } from "lucide-react";
+import { SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 export default function Auth() {
   const { user, loading } = useAuth();
@@ -17,6 +18,7 @@ export default function Auth() {
   const [submitting, setSubmitting] = useState(false);
   const { signIn, signUp } = useAuth();
 
+  if (SKIP_AUTH_FOR_TESTING) return <Navigate to="/" replace />;
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="animate-pulse text-muted-foreground">Loading...</div></div>;
   if (user) return <Navigate to="/" replace />;
 

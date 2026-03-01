@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bot, Send, Loader2, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -91,10 +92,20 @@ export default function Mentor() {
   const send = async () => {
     if (!input.trim() || isLoading) return;
     const userMsg: Message = { role: "user", content: input.trim() };
+    const userInput = input.trim();
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
     setIsLoading(true);
+
+    if (SKIP_AUTH_FOR_TESTING) {
+      setTimeout(() => {
+        const demoReply = `Great question! For screenshots/demo mode, here's a strong path:\n\n1. Focus on React + TypeScript projects\n2. Build one portfolio-quality app per week\n3. Practice 2 DSA problems daily\n4. Tailor resume bullets with measurable outcomes\n\nFor your question ("${userInput}"), I recommend starting with one 60-minute focused session today.`;
+        setMessages((prev) => [...prev, { role: "assistant", content: demoReply }]);
+        setIsLoading(false);
+      }, 700);
+      return;
+    }
 
     let assistantSoFar = "";
     const upsertAssistant = (chunk: string) => {
