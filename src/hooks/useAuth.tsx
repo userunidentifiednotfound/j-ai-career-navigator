@@ -19,19 +19,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set a fast timeout - don't let auth block the UI for more than 3s
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'TOKEN_REFRESHED' && !session) {
-        // Token refresh failed, clear corrupt session
+        // Token refresh failed - clear ALL stored auth data
+        localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
         supabase.auth.signOut();
       }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      clearTimeout(timeout);
     });
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        // Clear corrupt session data
+        // Clear corrupt session data from localStorage
+        localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
         supabase.auth.signOut();
         setSession(null);
         setUser(null);
@@ -40,9 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
       }
       setLoading(false);
+      clearTimeout(timeout);
+    }).catch(() => {
+      // Network error - clear stale tokens and stop loading
+      localStorage.removeItem('sb-vhxzeywrjzdpwxagzfbg-auth-token');
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+      clearTimeout(timeout);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
