@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Search, Loader2, MapPin, Clock, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { DEMO_JOBS, SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 interface Job {
   title: string;
@@ -20,14 +21,30 @@ interface Job {
 }
 
 export default function Jobs() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [jobs, setJobs] = useState<Job[]>(SKIP_AUTH_FOR_TESTING ? (DEMO_JOBS as Job[]) : []);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const [searched, setSearched] = useState(false);
+  const [searched, setSearched] = useState(SKIP_AUTH_FOR_TESTING);
 
   const searchJobs = async (searchQuery?: string) => {
     setLoading(true);
     setSearched(true);
+
+    if (SKIP_AUTH_FOR_TESTING) {
+      const q = (searchQuery || query).trim().toLowerCase();
+      const filtered = q
+        ? DEMO_JOBS.filter((job) =>
+            [job.title, job.company, job.location, job.description, ...job.skills]
+              .join(" ")
+              .toLowerCase()
+              .includes(q)
+          )
+        : DEMO_JOBS;
+      setJobs(filtered as Job[]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke("search-jobs", {
         body: { query: searchQuery || query || undefined },

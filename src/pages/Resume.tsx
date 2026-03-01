@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   FileText, Sparkles, Loader2, Plus, Trash2, Download, Lightbulb, CheckCircle2,
 } from "lucide-react";
+import { DEMO_RESUME, SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 interface Experience {
   company: string;
@@ -31,16 +32,18 @@ interface ResumeData {
 export default function Resume() {
   const { profile } = useProfile();
 
-  const [name, setName] = useState(profile?.full_name || "");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [skills, setSkills] = useState("");
-  const [education, setEducation] = useState("");
-  const [experiences, setExperiences] = useState<Experience[]>([
-    { company: "", role: "", duration: "", description: "" },
-  ]);
-  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [name, setName] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.personalInfo.name : (profile?.full_name || ""));
+  const [email, setEmail] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.personalInfo.email : "");
+  const [phone, setPhone] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.personalInfo.phone : "");
+  const [location, setLocation] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.personalInfo.location : "");
+  const [skills, setSkills] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.skills : "");
+  const [education, setEducation] = useState(SKIP_AUTH_FOR_TESTING ? DEMO_RESUME.education : "");
+  const [experiences, setExperiences] = useState<Experience[]>(
+    SKIP_AUTH_FOR_TESTING ? (DEMO_RESUME.experience as Experience[]) : [{ company: "", role: "", duration: "", description: "" }]
+  );
+  const [resumeData, setResumeData] = useState<ResumeData | null>(
+    SKIP_AUTH_FOR_TESTING ? (DEMO_RESUME.resumeData as ResumeData) : null
+  );
   const [loading, setLoading] = useState(false);
 
   const addExperience = () =>
@@ -55,6 +58,12 @@ export default function Resume() {
   const generateResume = async () => {
     setLoading(true);
     try {
+      if (SKIP_AUTH_FOR_TESTING) {
+        setResumeData(DEMO_RESUME.resumeData as ResumeData);
+        toast({ title: "Demo resume loaded", description: "Using sample resume data for screenshots." });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("generate-resume", {
         body: {
           personalInfo: { name, email, phone, location },

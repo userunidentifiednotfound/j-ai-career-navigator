@@ -1,13 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { DEMO_PROGRESS, DEMO_TASKS, SKIP_AUTH_FOR_TESTING } from "@/lib/testingMode";
 
 export function useProgress() {
   const { user } = useAuth();
 
   const { data: progress, isLoading } = useQuery({
-    queryKey: ["progress", user?.id],
+    queryKey: ["progress", user?.id, SKIP_AUTH_FOR_TESTING],
     queryFn: async () => {
+      if (!user && SKIP_AUTH_FOR_TESTING) return DEMO_PROGRESS;
       if (!user) return [];
       const { data, error } = await supabase
         .from("user_progress")
@@ -17,12 +19,13 @@ export function useProgress() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user || SKIP_AUTH_FOR_TESTING,
   });
 
   const { data: allTasks } = useQuery({
-    queryKey: ["all-tasks-stats", user?.id],
+    queryKey: ["all-tasks-stats", user?.id, SKIP_AUTH_FOR_TESTING],
     queryFn: async () => {
+      if (!user && SKIP_AUTH_FOR_TESTING) return DEMO_TASKS;
       if (!user) return [];
       const { data, error } = await supabase
         .from("daily_tasks")
@@ -32,7 +35,7 @@ export function useProgress() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!user || SKIP_AUTH_FOR_TESTING,
   });
 
   const totalTasks = allTasks?.length || 0;
