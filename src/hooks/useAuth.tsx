@@ -21,64 +21,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const clearCorruptSession = async () => {
-      localStorage.removeItem("sb-vhxzeywrjzdpwxagzfbg-auth-token");
-      try {
-        await supabase.auth.signOut({ scope: "local" });
-      } catch {
-        // Ignore network/abort errors during local cleanup
-      }
-      if (mounted) {
-        setSession(null);
-        setUser(null);
-      }
-    };
-
-    // Never block UI indefinitely on auth bootstrap
-    const timeout = setTimeout(() => {
-      if (mounted) setLoading(false);
-    }, 2500);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "TOKEN_REFRESHED" && !session) {
-        void clearCorruptSession();
-        if (mounted) setLoading(false);
-        clearTimeout(timeout);
-        return;
-      }
-
-      if (mounted) {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-      clearTimeout(timeout);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    supabase.auth.getSession()
-      .then(async ({ data: { session }, error }) => {
+    (async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+
         if (error) {
-          await clearCorruptSession();
-        } else if (mounted) {
+          console.error("Auth session error:", error.message);
+          setSession(null);
+          setUser(null);
+        } else {
           setSession(session);
           setUser(session?.user ?? null);
         }
-      })
-      .catch(async (err) => {
+      } catch (err) {
         if ((err as Error)?.name !== "AbortError") {
           console.error("Auth bootstrap error:", err);
         }
-        await clearCorruptSession();
-      })
-      .finally(() => {
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+        }
+      } finally {
         if (mounted) setLoading(false);
-        clearTimeout(timeout);
-      });
+      }
+    })();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 

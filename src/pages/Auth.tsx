@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,38 +37,26 @@ export default function Auth() {
           toast.success("Account created! You're being signed in...");
         }
       } else {
-        let { error } = await signIn(email, password);
-
-        // Recover once from stale/aborted auth state before showing error
-        const isFetchAbortError =
-          !!error &&
-          (error.message.includes("Failed to fetch") ||
-            error.message.includes("aborted") ||
-            (error as Error).name === "AuthRetryableFetchError");
-
-        if (isFetchAbortError) {
-          try {
-            await supabase.auth.signOut({ scope: "local" });
-          } catch {
-            // Ignore cleanup errors
-          }
-          const retry = await signIn(email, password);
-          error = retry.error;
-        }
-
+        const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes("Invalid login")) toast.error("Invalid email or password");
-          else if (error.message.includes("Failed to fetch") || error.message.includes("aborted")) {
-            toast.error("Session reset completed. Please try sign in once more.");
+          if (error.message.includes("Invalid login")) {
+            toast.error("Invalid email or password");
+          } else if (error.message.includes("Email not confirmed")) {
+            toast.error("Email is not confirmed yet. Please try signup again.");
+          } else if (error.message.includes("Failed to fetch") || error.name === "AuthRetryableFetchError") {
+            toast.error("Unable to reach auth service right now. Please retry in a few seconds.");
+          } else {
+            toast.error(error.message);
           }
-          else toast.error(error.message);
         }
       }
     } catch (err: any) {
       if (err?.name === "AbortError" || err?.message?.includes("aborted")) {
         toast.error("Request was interrupted. Please try again.");
+      } else if (err?.message?.includes("fetch")) {
+        toast.error("Auth service temporarily unreachable. Please try again.");
       } else {
-        toast.error(err?.message?.includes("fetch") ? "Session issue detected. Please try again." : "Something went wrong. Please try again.");
+        toast.error("Something went wrong. Please try again.");
       }
     } finally {
       setSubmitting(false);
